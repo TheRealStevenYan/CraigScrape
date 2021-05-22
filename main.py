@@ -13,4 +13,3 @@ TOKEN = os.getenv('TOKEN')
 
 client = discord.Client()
 
-b
