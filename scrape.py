@@ -30,23 +30,32 @@ def search_listings(query):
     url = 'https://vancouver.craigslist.org/search/sss?sort=new&query={query}'.format(query=query)
     html = requests.get(url).content
     soup = BeautifulSoup(html, 'html.parser')
-    results = soup.select('.hdrlnk')
+    results = soup.select('.result-info')
     return results
 
 
 # Parses a new search result into a title, id and link.
 def parse_search_results(result):
-    title = result.get_text()
-    id = result.get('id')[7:]
-    link = result.get('href')
-    return title, id, link
+    try:
+        price = result.select_one('.result-price').get_text()
+    except AttributeError:
+        price = 'Unspecified'
+
+    result_link = result.select_one('.hdrlnk')
+
+    title = result_link.get_text()
+    id = result_link.get('id')[7:]
+    link = result_link.get('href')
+
+    return title, id, price, link
 
 
 # Returns formatted string for search result given title, id and link.
-def get_formatted_results(title, id, link):
+def get_formatted_results(title, id, price, link):
     id = 'Post ID: {}'.format(id)
     link = 'Link: {}'.format(link)
-    return '{}\n{}\n{}'.format(title, id, link)
+    price = 'Price: {}'.format(price)
+    return '{}\n{}\n{}\n{}'.format(title, id, price, link)
 
 
 '''
@@ -57,12 +66,14 @@ If it finds an already existing post, does nothing.
 
 Hash table is used to keep track of previous postings to prevent duplicate posts.
 Notification backlog represented by LIFO queue represent a backlog of postings to notify the user with.
+Last item is the first thing to be notified, hence LIFO.
 '''
+
+hashtable = dict()
 
 
 class SearchQuery:
     def __init__(self, query):
-        self.hashtable = dict()
         self.notification_backlog = LifoQueue(400)
         self.query = query
         self.search()
@@ -88,13 +99,13 @@ class SearchQuery:
         results = search_listings(self.query)
 
         for result in results:
-            title, id, link = parse_search_results(result)
+            title, id, price, link = parse_search_results(result)
 
-            if self.hashtable.get(id):
+            if hashtable.get(id):
                 break
 
-            self.hashtable.update({id: title})
-            self.notification_backlog.put(get_formatted_results(title, id, link))
+            hashtable.update({id: title})
+            self.notification_backlog.put(get_formatted_results(title, id, price, link))
 
 
-a = SearchQuery('bike')
+a = SearchQuery('gpu')
