@@ -1,5 +1,6 @@
 """
-Contains a dict which stores keywords for different categories under 'for sale' and the equivalent word used in the url
+Contains a dict which stores keywords for different categories under
+'for sale' and the equivalent phrase used in the url.
 """
 
 categories_for_sale = {'all': 'sss',
@@ -50,6 +51,16 @@ categories_for_sale = {'all': 'sss',
                        'wanted': 'waa'}
 
 
+# All possible search categories listed out in an array.
+all_categories = ['all', 'antiques', 'appliances', 'arts+crafts', 'atvs/utvs/snow', 'auto parts', 'auto wheels & tires',
+                  'aviation', 'baby+kids', 'barter', 'beauty+hlth', 'bike parts', 'bikes', 'boat parts', 'boats',
+                  'books', 'business', 'cars+trucks', 'cds/dvd/vhs', 'cell phones', 'clothes+acc', 'collectibles',
+                  'computer parts', 'computers', 'electronics', 'farm+garden', 'free stuff', 'furniture',
+                  'garage sales', 'general', 'heavy equipment', 'household', 'jewelry', 'materials', 'motorcycle parts',
+                  'motorcycles', 'music instr', 'photo+video', 'RVs', 'sporting', 'tickets', 'tools', 'toys+games',
+                  'trailers', 'video gaming', 'wanted']
+
+
 # Returns a search url given a search query and a category to search under.
 def get_search_url(query, category='all'):
     try:
@@ -68,9 +79,15 @@ def get_search_url(query, category='all'):
 """
 Code used to get the info for categories_for_sale. Leaving it here in case it ever needs to be used again.
 
-soup = BeautifulSoup(open_html('previous_search_results'), 'html.parser')
+generic_url = get_search_url("", "all")
+html = requests.get(generic_url).content
+soup = BeautifulSoup(html, 'html.parser')
+results = soup.select('.result-info')
 results = soup.find_all('select', {'id': 'subcatAbb'})
 
 for result in soup.find_all('option'):
     print("'{}' : '{}',".format(result.get_text(), result.get('value')))
+
+for result in soup.find_all('option'):
+    print("'{}',".format(result.get_text()))
 """
