@@ -4,6 +4,8 @@ from queue import LifoQueue
 import requests
 from bs4 import BeautifulSoup
 
+from scraping.craigslist_urls import get_search_url
+
 '''
 TO DO:
 Add persistence to search queries - if the script is ever stopped, it will pick up without notifying about old listings
@@ -25,16 +27,15 @@ def open_html(file_path):
         return file.read()
 
 
-# Returns a list of strings containing the title, post ID and direct link to new postings.
-def search_listings(query):
-    url = 'https://vancouver.craigslist.org/search/sss?sort=new&query={query}'.format(query=query)
+# Returns a list of strings containing the title, post ID and direct link to new postings, given a query and category.
+def search_listings(url):
     html = requests.get(url).content
     soup = BeautifulSoup(html, 'html.parser')
     results = soup.select('.result-info')
     return results
 
 
-# Parses a new search result into a title, id and link.
+# Parses a new search result into a title, id, price and link.
 def parse_search_results(result):
     try:
         price = result.select_one('.result-price').get_text()
@@ -50,7 +51,7 @@ def parse_search_results(result):
     return title, id, price, link
 
 
-# Returns formatted string for search result given title, id and link.
+# Returns formatted string for search result given title, id, price and link.
 def get_formatted_results(title, id, price, link):
     id = 'Post ID: {}'.format(id)
     link = 'Link: {}'.format(link)
@@ -69,13 +70,16 @@ Notification backlog represented by LIFO queue represent a backlog of postings t
 Last item is the first thing to be notified, hence LIFO.
 '''
 
-hashtable = dict()
-
 
 class SearchQuery:
-    def __init__(self, query):
-        self.notification_backlog = LifoQueue(400)
+    hashtable = dict()
+
+    def __init__(self, query, category='all'):
         self.query = query
+        self.category = category
+
+        self.notification_backlog = LifoQueue(400)
+        self.url = get_search_url(query, category)
         self.search()
         self.periodic_tasks()
 
@@ -96,16 +100,16 @@ class SearchQuery:
     # Immediately stops the search when it encounters a posting it has seen before.
     # Also run when the program is initialised.
     def search(self):
-        results = search_listings(self.query)
+        results = search_listings(self.url)
 
         for result in results:
             title, id, price, link = parse_search_results(result)
 
-            if hashtable.get(id):
+            if SearchQuery.hashtable.get(id):
                 break
 
-            hashtable.update({id: title})
+            SearchQuery.hashtable.update({id: title})
             self.notification_backlog.put(get_formatted_results(title, id, price, link))
 
 
-a = SearchQuery('gpu')
+a = SearchQuery('gpu', 'electronics')
