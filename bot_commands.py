@@ -1,22 +1,41 @@
+import asyncio
+
 from discord.ext import commands
 
 from scraping.craigslist_urls import all_categories
+from scraping.scrape import SearchQuery
 
 
-@commands.command()
-async def search(ctx, *args):
-    # Usage: -search <keyword> <category>
-    if len(args) > 2 or len(args) < 1:
-        await ctx.send("Usage: '-search <keyword> <category>'")
-        return
+# TODO: Implement disabling / enabling tracking and changing queries.
+class Tracking(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.searches = dict()
+        self.tracking = True
 
-    keyword = args[0]
-    try:
-        category = args[1]
-    except IndexError:
-        category = 'all'
+    @commands.command()
+    async def search(self, ctx, *args):
+        # Usage: -search <keyword> <category>
+        if len(args) > 2 or len(args) < 1:
+            await ctx.send("Usage: '-search <keyword> <category>'")
+            return
 
-    await ctx.send('SEARCHING: Keyword = {}, Category = {}'.format(keyword, category))
+        keyword = args[0]
+        try:
+            category = args[1]
+        except IndexError:  # By default, will set category to 'all' if not specified
+            category = 'all'
+
+        await ctx.send('SEARCHING: Keyword = {}, Category = {}'.format(keyword, category))
+        new_query = SearchQuery(keyword, category)
+        await self.bot.wait_until_ready()
+
+        while True:
+            backlog = await new_query.run_search()
+            while not backlog.empty():
+                notification = backlog.get()
+                await ctx.send(notification)
+            await asyncio.sleep(60)
 
 
 @commands.command()
@@ -40,5 +59,5 @@ async def help(ctx, *args):
 
 
 def setup(bot):
-    bot.add_command(search)
+    bot.add_cog(Tracking(bot))
     bot.add_command(help)

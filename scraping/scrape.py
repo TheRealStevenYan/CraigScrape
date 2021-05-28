@@ -1,4 +1,3 @@
-import asyncio
 from queue import LifoQueue
 
 import requests
@@ -54,7 +53,7 @@ def get_formatted_results(title, id, price, link):
     id = 'Post ID: {}'.format(id)
     link = 'Link: {}'.format(link)
     price = 'Price: {}'.format(price)
-    return '{}\n{}\n{}\n{}'.format(title, id, price, link)
+    return '---\n{}\n{}\n{}\n{}\n---'.format(title, id, price, link)
 
 
 '''
@@ -79,21 +78,13 @@ class SearchQuery:
         # Last item is the first thing to be notified, hence LIFO.
         self.notification_backlog = LifoQueue(400)
 
-        self.search()
-        self.periodic_tasks()
-
-    # Periodic tasks to run. Subject to change later.
-    async def periodic_tasks(self):
-        while True:
-            self.search()
-            self.notify_user()
-            await asyncio.sleep(60)
-
-    # Notifies the user about new listings while the notification backlog has stuff.
-    async def notify_user(self):
-        while not self.notification_backlog.empty():
-            notification = self.notification_backlog.get()
-            print(notification)
+    # Periodic tasks to run. Runs a search and returns a notification backlog for the bot to manage.
+    async def run_search(self):
+        await self.search()
+        backlog = self.notification_backlog
+        # TODO: Check to see if there's a better way of restarting the Q later.
+        self.notification_backlog = LifoQueue(400)
+        return backlog
 
     # Runs a search using the given query.
     # Immediately stops the search when it encounters a posting it has seen before.
