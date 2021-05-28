@@ -86,6 +86,10 @@ class SearchQuery:
         self.notification_backlog = LifoQueue(400)
         return backlog
 
+    # Returns keyword for search query.
+    def get_keyword(self):
+        return self.query
+
     # Runs a search using the given query.
     # Immediately stops the search when it encounters a posting it has seen before.
     # Also run when the program is initialised.
@@ -98,5 +102,5 @@ class SearchQuery:
             if SearchQuery.hashtable.get(id):
                 break
 
-            SearchQuery.hashtable.update({id: title})
+            SearchQuery.hashtable.update({id : title})
             self.notification_backlog.put(get_formatted_results(title, id, price, link))
