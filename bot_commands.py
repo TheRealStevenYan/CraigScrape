@@ -8,6 +8,8 @@ from scraping.craigslist_urls import all_categories
 from scraping.scrape import SearchQuery
 
 
+# TODO: Implement changing categories of searches.
+
 class Tracking(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -34,7 +36,8 @@ class Tracking(commands.Cog):
             await self.periodic_tasks(ctx, search_query)
 
     @commands.command()
-    async def all_searches(self, ctx):
+    async def searches(self, ctx):
+        # Usage: -all_searches
         all_searches = "**Currently tracking the following:**\n"
         for searches in self.searches:
             all_searches += "{}\n".format(searches)
@@ -119,7 +122,7 @@ async def help(ctx, *args):
                        "To temporarily automatic disable tracking.\n\n"
                        "**-track**\n"
                        "Will re-enable automatic tracking.\n\n"
-                       "**-all_searches**\n"
+                       "**-searches**\n"
                        "Lists out every keyword currently being tracked.\n\n")
 
 

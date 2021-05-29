@@ -5,23 +5,25 @@ from bs4 import BeautifulSoup
 
 from scraping.craigslist_urls import get_search_url
 
+# TODO:
 '''
-TO DO:
-Add persistence to search queries - if the script is ever stopped, it will pick up without notifying about old listings
 Make this scrape beyond craigslist vancouver
+Scrape timestamps, location
 '''
 
 
-# Saves HTML content of web page to the file stored at file_path
-def save_html(html, file_path):
-    with open(file_path, 'wb') as file:
-        file.write(html)
+# Saves the given post ID to 'previous_post_ids'
+def log_post_id(post_id):
+    with open('scraping\previous_post_ids', 'a') as file:
+        file.write('{}\n'.format(post_id))
 
 
 # Opens the text stored at file_path
-def open_html(file_path):
-    with open(file_path, 'rb') as file:
-        return file.read()
+def get_post_ids():
+    with open('scraping\previous_post_ids', 'r') as file:
+        post_ids = [line.rstrip() for line in file]
+
+    return post_ids
 
 
 # Returns a list of strings containing the title, post ID and direct link to new postings, given a query and category.
@@ -45,28 +47,37 @@ def parse_search_results(result):
     id = result_link.get('id')[7:]
     link = result_link.get('href')
 
-    return title, id, price, link
+    time = get_posting_time(link)
+
+    return title, id, price, time, link
+
+
+# Returns the time since a given listing was first posted to Craigslist, given a url to the posting.
+def get_posting_time(url):
+    html = requests.get(url).content
+    soup = BeautifulSoup(html, 'html.parser')
+    time = soup.select_one('.timeago').get_text().strip()
+    return time
 
 
 # Returns formatted string for search result given title, id, price and link.
-def get_formatted_results(title, id, price, link):
+def get_formatted_results(title, id, price, time, link):
     id = 'Post ID: {}'.format(id)
     link = 'Link: {}'.format(link)
     price = 'Price: {}'.format(price)
-    return '---\n{}\n{}\n{}\n{}\n---'.format(title, id, price, link)
-
-
-'''
-The SearchQuery class keeps track of specific search queries, as its name implies.
-A SearchQuery class will periodically ping the website with its given search query,
-and update the user iff it detects new posts. 
-If it finds an already existing post, does nothing.
-'''
+    time = 'Posted: {}'.format(time)
+    return '---\n{}\n{}\n{}\n{}\n{}\n---'.format(title, id, price, time, link)
 
 
 class SearchQuery:
-    # Hash table used to keep track of previous postings to prevent duplicate posts.
-    hashtable = dict()
+    """
+    The SearchQuery class keeps track of specific search queries, as its name implies.
+    A SearchQuery class will periodically ping the website with its given search query,
+    and update the user iff it detects new posts.
+    If it finds an already existing post, does nothing.
+    """
+    # Use a list to keep track of previously searched ID's.
+    previous_ids = get_post_ids()
 
     def __init__(self, query, category='all'):
         # Instance variables keeping track of search details.
@@ -97,10 +108,13 @@ class SearchQuery:
         results = search_listings(self.url)
 
         for result in results:
-            title, id, price, link = parse_search_results(result)
+            title, id, price, time, link = parse_search_results(result)
 
-            if SearchQuery.hashtable.get(id):
-                break
+            if id in SearchQuery.previous_ids:
+                return
 
-            SearchQuery.hashtable.update({id : title})
-            self.notification_backlog.put(get_formatted_results(title, id, price, link))
+            SearchQuery.previous_ids.append(id)
+            # TODO: Right now, the logic is that the ID is logged even if the user is never notified
+            # Change this so that the user has to be notified before the ID is logged.
+            log_post_id(id)
+            self.notification_backlog.put(get_formatted_results(title, id, price, time, link))
