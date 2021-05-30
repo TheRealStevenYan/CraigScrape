@@ -8,8 +8,6 @@ from scraping.craigslist_urls import all_categories
 from scraping.scrape import SearchQuery
 
 
-# TODO: Implement changing categories of searches.
-
 class Tracking(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -48,7 +46,8 @@ class Tracking(commands.Cog):
         # Usage: -remove <keyword>
         if len(args) != 1 or self.tracking.is_set():
             await ctx.send("Usage: 'remove <keyword>\n"
-                           "Please disable tracking before removing search queries.")
+                           "Please disable tracking before removing search queries.\n"
+                           "To disable tracking, use command '-stop'")
             return
 
         keyword = args[0]
@@ -95,7 +94,7 @@ class Tracking(commands.Cog):
                 await asyncio.sleep(120)
 
         # If Craigslist tracking is disabled, the current state of the backlog is saved.
-        self.searches.update({search_query.get_keyword() : (search_query, backlog)})
+        self.searches.update({search_query.get_keyword(): (search_query, backlog)})
 
 
 @commands.command()

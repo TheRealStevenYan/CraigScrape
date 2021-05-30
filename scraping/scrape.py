@@ -5,12 +5,6 @@ from bs4 import BeautifulSoup
 
 from scraping.craigslist_urls import get_search_url
 
-# TODO:
-'''
-Make this scrape beyond craigslist vancouver
-Scrape timestamps, location
-'''
-
 
 # Saves the given post ID to 'previous_post_ids'
 def log_post_id(post_id):
@@ -93,7 +87,6 @@ class SearchQuery:
     async def run_search(self):
         await self.search()
         backlog = self.notification_backlog
-        # TODO: Check to see if there's a better way of restarting the Q later.
         self.notification_backlog = LifoQueue(400)
         return backlog
 
@@ -111,10 +104,9 @@ class SearchQuery:
             title, id, price, time, link = parse_search_results(result)
 
             if id in SearchQuery.previous_ids:
+                print('Detected a previously searched post, ID {}'.format(id))
                 return
 
             SearchQuery.previous_ids.append(id)
-            # TODO: Right now, the logic is that the ID is logged even if the user is never notified
-            # Change this so that the user has to be notified before the ID is logged.
             log_post_id(id)
             self.notification_backlog.put(get_formatted_results(title, id, price, time, link))
